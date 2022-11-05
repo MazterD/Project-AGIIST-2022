@@ -1,0 +1,331 @@
+---
+# file: ansible-gcp-servers-setup-all.yml
+# configures the server instances
+# This Playbook has Three Plays: one for critical configurations in all servers
+# A second one for installing software in web servers
+# a third one to install software in the Load Balancer server
+
+# This First Play Sets up critical configuration on servers
+- hosts: targets
+  # as the systems are not yet "known" by Ansible Facts cannot be gathered yet
+  gather_facts: no
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+
+  pre_tasks:
+    # To operate remotely in critical files without direct user input
+    - name: Remove require tty - alt
+      lineinfile:
+        regexp: "requiretty"
+        dest: /etc/sudoers.d/os_defaults
+        state: absent
+    # Giving permissions in sudoers for system critical files (see https://docs.ansible.com/ansible/latest/modules/lineinfile_module.html)
+    - name: Validate the sudoers file before saving  not to require password
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^%ADMIN ALL='
+        line: '%ADMIN ALL=(ALL) NOPASSWD: ALL'
+        validate: /usr/sbin/visudo -cf %s
+    # Install the SSH key on servers
+    - name: install ssh key
+      authorized_key:
+        user: ubuntu
+        key: "{{ lookup('file', '../id_rsa.pub') }}"
+        state: present
+
+# This Second Play installs the required software in web servers
+# tasks names are self explanatory
+- hosts: targets
+  gather_facts: True
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: Add NGINX Repository
+      apt_repository:
+        repo: ppa:nginx/stable
+        state: present
+    - name: install tar
+      apt:
+        pkg: tar
+        state: present
+
+# This third Play runs the npm install and the service in all web servers
+- hosts: bootstorage
+  gather_facts: True
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: install npm
+      apt:
+        pkg: npm
+        state: present
+    - name: install maven
+      apt:
+        pkg: maven
+        state: present
+    - name: Install add-apt-repostory
+      become: yes
+      apt: name=software-properties-common state=latest
+    - name: install open jdk 8
+      apt:
+        pkg: openjdk-8-jdk
+        state: present
+    - name: Copying the Directory's contents (sub directories/files)
+      copy:
+        src: ../bootstorage
+        dest: ~/
+    - name: run mvn package
+      shell: mvn package
+      args:
+        chdir: ~/bootstorage
+    - name: copy maven target
+      copy:
+        remote_src: yes
+        src: ~/bootstorage/target/bootstorage-0.0.1-SNAPSHOT.jar
+        dest: /usr/spring/bootstorage/
+    - name: launch bootstorage service
+      copy:
+        src: ../bootstorage/bootstorage.service
+        dest: /etc/systemd/system/
+    - name: systemctl run service
+      ansible.builtin.systemd:
+        name: bootstorage
+        state: started
+                    
+- hosts: expressed
+  gather_facts: True
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: install npm
+      apt:
+        pkg: npm
+        state: present
+    - name: Copying the Directory's contents (sub directories/files)
+      become: true 
+      copy:
+        src: ../expressed
+        dest: ~/ 
+    - name: npm install
+      command: 
+        cmd: npm install
+        chdir: /root/expressed
+    - name: launch expressed.service
+      copy:
+          src: ../expressed/expressed.service
+          dest: /etc/systemd/system/
+    - name: systemctl run service
+      ansible.builtin.systemd:
+        name: expressed
+        state: started
+
+- hosts: happy
+  gather_facts: True
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+  
+  tasks:
+    - name: install npm
+      apt:
+        pkg: npm
+        state: present
+    - name: Copying the Directory's contents (sub directories/files)
+      become: true 
+      copy:
+        src: ../happy
+        dest: ~/
+    - name: npm install
+      command: 
+        cmd: npm install
+        chdir: /root/happy   
+    - name: launch happy.service
+      copy:
+          src: ../happy/happy.service
+          dest: /etc/systemd/system/
+    - name: systemctl run service
+      ansible.builtin.systemd:
+        name: happy
+        state: started
+
+- hosts: vuecalc
+  gather_facts: True
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+  
+  tasks:
+    - name: add apt key for nodesource
+      apt_key: url=https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+    - name: add repo for nodesource
+      apt_repository:
+            repo: deb https://deb.nodesource.com/node_16.x focal main 
+            update_cache: yes
+    - name: install nodejs
+      apt: 
+        name=nodejs
+    - name: install python2
+      apt:
+        name=python2
+    - name: Copying the Directory's contents (sub directories/files)
+      become: true 
+      copy:
+        src: ../vuecalc
+        dest: ~/
+    - name: npm install http server
+      command: npm install -g http-server
+    - name: npm install
+      command: 
+        cmd: npm install
+        chdir: /root/vuecalc
+    - name: run build
+      command: 
+        cmd: npm run build
+        chdir: /root/vuecalc
+    - name: launch vuecalc.service
+      copy:
+        src: ../vuecalc/vuecalc.service
+        dest: /etc/systemd/system/
+    - name: systemctl run service
+      ansible.builtin.systemd:
+        name: vuecalc
+        state: started
+
+# This fourth Play installs Prometheus and Grafana
+# This fourth Play installs Prometheus and Grafana
+- hosts: monitoring
+  gather_facts: yes
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+ 
+  tasks:
+    - name: Install prometheus
+      unarchive:
+        src: "https://github.com/prometheus/prometheus/releases/download/v2.37.2/prometheus-2.37.2.linux-amd64.tar.gz"
+        dest: /home/ubuntu
+        remote_src: yes
+    
+    - name: launch prometheus service
+      copy:
+        src: ../prometheus.service
+        dest: /etc/systemd/system/
+    - name: reload systemd
+      command: systemctl daemon-reload
+    - name: Start prometheus service
+      service:
+        name: prometheus
+        state: started
+        enabled: yes
+    - name: Check if prometheus is accessible
+      uri:
+        url: http://localhost:9090
+        method: GET
+        status_code: 200
+
+
+- hosts: targets
+  gather_facts: True
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: Install prometheus node exporter
+      unarchive:
+        src: "https://github.com/prometheus/node_exporter/releases/download/v1.4.0/node_exporter-1.4.0.linux-amd64.tar.gz"
+        dest: /home/ubuntu
+        remote_src: yes
+    
+    - name: launch node_exporter service
+      copy:
+        src: ../node_exporter.service
+        dest: /etc/systemd/system/
+    - name: Start node_exporter service
+      service:
+        name: node_exporter
+        state: started
+        enabled: yes
+    - name: Check if node exporter emits metrics
+      uri:
+        url: http://127.0.0.1:9100/metrics
+        method: GET
+        status_code: 200
+
+# This fith Play installs the required software in the Load Balancer
+- hosts: loadbal
+  gather_facts: true
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+
+  tasks:
+    - name: install npm
+      apt:
+        pkg: npm
+        state: present
+    # as there is no internal DNS service, we need to populate theb /etc/hosts
+    - name: update /etc/hosts file for name resolution of self
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "127.0.0.1 {{item}}"
+        state: present
+      with_items: balancer
+    # as there is no internal DNS service, we need to populate the /etc/hosts
+    - name: update /etc/hosts file for name resolution
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }} {{item}}"
+        state: present
+      when: hostvars[item]['ansible_default_ipv4']['address'] is defined
+      with_items: '{{groups.targets}}'
+
+    - name: add HAPROXY Repository
+      apt_repository:
+        repo: ppa:vbernat/haproxy-2.1
+        update_cache: true
+
+    - name: install haproxy and socat
+      apt:
+        pkg: ['haproxy', 'socat']
+        state: latest
+
+    - name: enable haproxy
+      lineinfile:
+        path: /etc/default/haproxy
+        regexp: "^ENABLED.+$"
+        line: "ENABLED=1"
+        state: present
+
+
+    - name: deploy haproxy config
+      template:
+        src: ./templates/haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        mode: 0644
+        validate: haproxy -f %s -c -q
+      notify: restart haproxy
+
+    - name: Ensure HAProxy is started and enabled on boot.
+      service:
+        name: haproxy
+        state: started
+        enabled: yes
+
+# The handler is common to the haproxy installation steps
+  handlers:
+  
+  - name: restart haproxy
+    service:
+      name: haproxy
+      state: restarted

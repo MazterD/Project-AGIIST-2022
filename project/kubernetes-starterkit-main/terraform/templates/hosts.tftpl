@@ -1,0 +1,51 @@
+%{ for ip in loadbal_IPs ~}
+balancer ansible_host=${ip} ansible_user=ubuntu ansible_connection=ssh
+%{ endfor ~}
+%{ for index, ip in bootstorage_IPs ~}
+${format("bootstorage_%1d", index + 1)} ansible_host=${ip} ansible_user=ubuntu ansible_connection=ssh
+%{ endfor ~}
+%{ for index, ip in expressed_IPs ~}
+${format("expressed_%1d", index + 1)} ansible_host=${ip} ansible_user=ubuntu ansible_connection=ssh
+%{ endfor ~}
+%{ for index, ip in happy_IPs ~}
+${format("happy_%1d", index + 1)} ansible_host=${ip} ansible_user=ubuntu ansible_connection=ssh
+%{ endfor ~}
+%{ for index, ip in vuecalc_IPs ~}
+${format("vuecalc_%1d", index + 1)} ansible_host=${ip} ansible_user=ubuntu ansible_connection=ssh
+%{ endfor ~}
+%{ for index, ip in monitoring_IPs ~}
+monitor ansible_host=${ip} ansible_user=ubuntu ansible_connection=ssh
+%{ endfor ~}
+
+[osmgmt]      #this group has the machine whose purpose is to manage the network
+localhost           ansible_connection=local
+
+[loadbal]          #this group encapsulates the machines that will manage the network's load
+balancer
+
+[bootstorage]     #this group consists of every machine that hosts the Bootstorage microservice
+bootstorage_1
+#bootstorage_2
+
+[expressed]     #this group consists of every machine that hosts the Expressed microservice
+expressed_1
+#expressed_2
+
+[happy]     #this group consists of every machine that hosts the Happy microservice
+happy_1
+#happy_2
+
+[vuecalc]     #this group consists of every machine that hosts the Vuecalc microservice
+vuecalc_1
+vuecalc_2
+
+[monitoring]
+monitor
+
+[targets:children]
+loadbal
+bootstorage
+expressed
+happy
+vuecalc
+monitoring

@@ -1,0 +1,40 @@
+balancer ansible_host=34.89.9.109 ansible_user=ubuntu ansible_connection=ssh
+bootstorage_1 ansible_host=34.105.183.222 ansible_user=ubuntu ansible_connection=ssh
+expressed_1 ansible_host=34.89.6.107 ansible_user=ubuntu ansible_connection=ssh
+happy_1 ansible_host=34.105.226.3 ansible_user=ubuntu ansible_connection=ssh
+vuecalc_1 ansible_host=35.189.98.152 ansible_user=ubuntu ansible_connection=ssh
+vuecalc_2 ansible_host=34.105.182.50 ansible_user=ubuntu ansible_connection=ssh
+monitor ansible_host=35.242.173.85 ansible_user=ubuntu ansible_connection=ssh
+
+[osmgmt]      #this group has the machine whose purpose is to manage the network
+localhost           ansible_connection=local
+
+[loadbal]          #this group encapsulates the machines that will manage the network's load
+balancer
+
+[bootstorage]     #this group consists of every machine that hosts the Bootstorage microservice
+bootstorage_1
+#bootstorage_2
+
+[expressed]     #this group consists of every machine that hosts the Expressed microservice
+expressed_1
+#expressed_2
+
+[happy]     #this group consists of every machine that hosts the Happy microservice
+happy_1
+#happy_2
+
+[vuecalc]     #this group consists of every machine that hosts the Vuecalc microservice
+vuecalc_1
+vuecalc_2
+
+[monitoring]
+monitor
+
+[targets:children]
+loadbal
+bootstorage
+expressed
+happy
+vuecalc
+monitoring

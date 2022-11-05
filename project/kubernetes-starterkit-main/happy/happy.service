@@ -1,0 +1,14 @@
+[Unit]
+Description=EXPRESSED demo service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+WorkingDirectory=/root/happy
+ExecStart=npm start
+
+[Install]
+WantedBy=multi-user.target

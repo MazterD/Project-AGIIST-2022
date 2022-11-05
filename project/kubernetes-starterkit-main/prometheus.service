@@ -1,0 +1,14 @@
+[Unit]
+Description=EXPRESSED demo service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+WorkingDirectory=/home/ubuntu/prometheus-2.37.2.linux-amd64
+ExecStart=/home/ubuntu/prometheus-2.37.2.linux-amd64/prometheus --config.file=/home/ubuntu/prometheus-2.37.2.linux-amd64/prometheus.yml
+
+[Install]
+WantedBy=multi-user.target

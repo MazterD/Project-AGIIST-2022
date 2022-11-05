@@ -1,0 +1,16 @@
+[Unit]
+Description=EXPRESSED demo service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+Environment="VUE_APP_EXPRESSED_BASE_URL=http://35.189.72.71:3000"
+Environment="VUE_APP_HAPPY_BASE_URL=http://http://34.142.88.97:4000"
+WorkingDirectory=/root/vuecalc
+ExecStart=http-server dist -p 80
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+{
+  "name": "happy",
+  "version": "1.0.0",
+  "description": "Hapi.js based microservice",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "prod": "npm install && node index.js"
+  },
+  "keywords": [
+    "hapi.js"
+  ],
+  "author": "Arpit Khandelwal",
+  "license": "MIT",
+  "dependencies": {
+    "hapi": "^17.8.1",
+    "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "@hapi/code": "^8.0.4",
+    "@hapi/lab": "^24.3.2"
+  }
+}
