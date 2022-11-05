@@ -38,7 +38,7 @@ Enter the VM by using the command:
 
 Now run the command and press "ENTER" 3 times:
 
-´´´ssh-keygen -t rsa -b 4096´´´
+```ssh-keygen -t rsa -b 4096```
 
 After generating the keys on the /.ssh/ folder we'll copy them to the Kubernetes directory:
 
@@ -46,7 +46,7 @@ After generating the keys on the /.ssh/ folder we'll copy them to the Kubernetes
 
 Enter the Terraform folder inside kubernetes-starterkit-main
 
-###Some of the terraform files will need to be edited
+### Some of the terraform files will need to be edited
 
 But before that you'll need to get a license for Google Cloud Platform and create a project record the project_id
 
